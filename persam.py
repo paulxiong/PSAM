@@ -22,7 +22,7 @@ def get_arguments():
     parser.add_argument('--data', type=str, default='./data')
     parser.add_argument('--outdir', type=str, default='persam')
     parser.add_argument('--ckpt', type=str, default='sam_vit_h_4b8939.pth')
-    parser.add_argument('--ref_idx', type=str, default='02')
+    parser.add_argument('--ref_idx', type=str, default='04')
     parser.add_argument('--sam_type', type=str, default='vit_t')
     
     args = parser.parse_args()
@@ -164,6 +164,10 @@ def persam(args, obj_name, images_path, masks_path, output_path):
 
         # Save masks
         plt.figure(figsize=(10, 10))
+        plt.subplot(1, 2, 1)
+        plt.imshow(ref_image)
+
+        plt.subplot(1, 2, 2)
         plt.imshow(test_image)
         show_mask(masks[best_idx], plt.gca())
         show_points(topk_xy, topk_label, plt.gca())

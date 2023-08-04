@@ -4,8 +4,17 @@ import matplotlib.pyplot as plt
 import cv2
 
 
-
 def show_mask(mask, ax, random_color=False):
+    if random_color:
+        color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
+    else:
+        # Use a more vivid color scheme (e.g., bright green)
+        color = np.array([0/255, 255/255, 0/255, 0.4])  # Change RGB values here
+    h, w = mask.shape[-2:]
+    mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+    ax.imshow(mask_image)
+
+def show_mask1(mask, ax, random_color=False):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
     else:
