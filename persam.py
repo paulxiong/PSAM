@@ -1,17 +1,17 @@
-import numpy as np
-import torch
-from torch.nn import functional as F
-
 import os
-import cv2
-from tqdm import tqdm
 import argparse
-import matplotlib.pyplot as plt
 import warnings
-warnings.filterwarnings('ignore')
-
+from tqdm import tqdm
+import torch
+import numpy as np
+from torch.nn import functional as F
+import matplotlib.pyplot as plt
+import cv2
 from show import *
 from per_segment_anything import sam_model_registry, SamPredictor
+
+warnings.filterwarnings('ignore')
+
 
 
 
@@ -22,8 +22,8 @@ def get_arguments():
     parser.add_argument('--data', type=str, default='./data')
     parser.add_argument('--outdir', type=str, default='persam')
     parser.add_argument('--ckpt', type=str, default='sam_vit_h_4b8939.pth')
-    parser.add_argument('--ref_idx', type=str, default='00')
-    parser.add_argument('--sam_type', type=str, default='vit_h')
+    parser.add_argument('--ref_idx', type=str, default='02')
+    parser.add_argument('--sam_type', type=str, default='vit_t')
     
     args = parser.parse_args()
     return args
