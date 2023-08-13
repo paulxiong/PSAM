@@ -52,7 +52,9 @@ def persam(args, obj_name, images_path, masks_path, output_path):
     
     # Path preparation
     ref_image_path = os.path.join(images_path, obj_name, args.ref_idx + '.jpg')
+    #for GPT: show the ref_iamge_path here, utilize SAM module, to allow end user to save mask image by click mouse on the showing image;
     ref_mask_path = os.path.join(masks_path, obj_name, args.ref_idx + '.png')
+    #for GPT: ignore above line, instead, give ref_mask_path by the saved mask image. 
     test_images_path = os.path.join(images_path, obj_name)
 
     output_path = os.path.join(output_path, obj_name)

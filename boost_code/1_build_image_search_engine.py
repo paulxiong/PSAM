@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# ## Index
-# 
-# * [Introduction](#intro)
-# * [Preparation](#preparation)
 # * [Reverse Image Search](#reverse-image-search)
 #     * [Configuration](#configuration)
 #     * [Embedding pipeline](#embedding-pipeline)
@@ -13,36 +6,18 @@
 #         * [2. Insert data](#step2)
 #         * [3. Search](#step3)
 # * [Benchmark](#benchmark)
-# 
-# 
 # # Reverse Image Search powered by Towhee & Milvus <a class="anchor" id="intro"></a>
 # 
 # Reverse image search takes an image as input and retrieves most similar images based on its content. The basic idea behind semantic image search is to represent each image as an embedding of features extracted by a pretrained deep learning model. Then image retrieval can be performed by storing & comparing image embeddings.
 # 
 # This notebook illustrates how to build an reverse image search engine from scratch using [Towhee](https://towhee.io/) and [Milvus](https://milvus.io/). We will go through procedures with example data. With this tutorial, you will learn how to build and evaluate a reverse image search system.
-# 
 # <img src="https://github.com/towhee-io/examples/raw/main/image/reverse_image_search/workflow.png" width = "60%" height = "60%" align=center />
-
-# ## Preparation <a class="anchor" id="preparation"></a>
-# 
-# To get ready for building the image search engine, we need to install some python packages, download example data, and start Milvus service in advance.
-# 
-# **Install dependencies**
-# 
 # First we need to install dependencies such as towhee, opencv-python and pillow. Please note you should install proper versions based on your environment.
-# 
 # | package | version |
 # | -- | -- |
 # | towhee | 1.1.0 |
 # | opencv-python | |
 # | pillow | |
-
-# In[1]:
-
-
-# get_ipython().system(' python -m pip install -q towhee opencv-python pillow')
-
-
 # **Prepare data**
 # 
 # Here we use a subset of the [ImageNet](https://www.image-net.org/) dataset (100 classes). The example data is available on [Github](https://github.com/towhee-io/examples/releases/download/data/reverse_image_search.zip). You can follow command below to download it. The example data is organized as follows:
@@ -50,9 +25,6 @@
 # - train: directory of candidate images, 10 images per class from ImageNet train data
 # - test: directory of query images, 1 image per class from ImageNet test data
 # - reverse_image_search.csv: a csv file containing *id, path, and label* for each candidate image
-
-# In[2]:
-
 
 # get_ipython().system(' curl -L https://github.com/towhee-io/examples/releases/download/data/reverse_image_search.zip -O')
 # get_ipython().system(' unzip -q -o reverse_image_search.zip')
@@ -64,13 +36,10 @@
 # 
 # This notebook uses [milvus 2.2.10](https://milvus.io/docs/v2.2.x/install_standalone-docker.md) and [pymilvus 2.2.11](https://milvus.io/docs/release_notes.md#2210).
 
-# In[3]:
-
-
 # get_ipython().system(' wget https://github.com/milvus-io/milvus/releases/download/v2.2.10/milvus-standalone-docker-compose.yml -O docker-compose.yml')
 # get_ipython().system(' docker-compose up -d')
-# get_ipython().system(' python -m pip install -q pymilvus==2.2.11')
-
+# get_ipython().system(' python -m pip install -q pymilvus==2.2.12')
+# veven setup :source /Volumes/997G/github/ISAT_with_segment_anything/venv/bin/activate
 
 # ## Reverse Image Search <a class="anchor" id="reverse-image-search"></a>
 # 
@@ -82,8 +51,6 @@
 # For later use, we import packages & set parameters at the beginning. You are able to change parameters according to your needs and environment. Please note that the embedding dimension `DIM` should match the selected model name `MODEL`.
 # 
 # By default, this tutorial selects a pretrained model 'resnet50' to extract image embeddings. It sets ['IVF_FLAT'](https://milvus.io/docs/v2.0.x/index.md#IVF_FLAT) as index and ['L2'](https://milvus.io/docs/v2.0.x/metric.md#Euclidean-distance-L2) as distance metric for Milvus configuration. `TOPK` determines how many search results returned, which defaults to 10.
-
-# In[4]:
 
 
 import csv
@@ -109,16 +76,14 @@ INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
 
 # path to csv (column_1 indicates image path) OR a pattern of image paths
-INSERT_SRC = 'reverse_image_search.csv'
+# INSERT_SRC = 'reverse_image_search.csv'
+# boost_ai: change following INSERT_SRC to be main()'s arugment, default is none
+INSERT_SRC = '1.csv'
 QUERY_SRC = './test/*/*.JPEG'
 
 
 # ### Embedding pipeline <a class="anchor" id="embedding-pipeline"></a>
-# 
 # As mentioned above, the similarity search actually happens to vectors. So we need to convert each image into an embedding. To pass image path into the image embedding operator, we use a function streamly reads image path given a pattern or a csv. Thus the embedding pipeline generates image embeddings given a pattern or csv of image path(s).
-
-# In[5]:
-
 
 # Load image path
 def load_image(x):
@@ -140,14 +105,9 @@ p_embed = (
         .map('img', 'vec', ops.image_embedding.timm(model_name=MODEL, device=DEVICE))
 )
 
-
-# In[6]:
-
-
 # Display embedding result, no need for implementation
 p_display = p_embed.output('img_path', 'img', 'vec')
 DataCollection(p_display('./test/goldfish/*.JPEG')).show()
-
 
 # ### Steps <a class="anchor" id="steps"></a>
 # 
@@ -161,13 +121,11 @@ DataCollection(p_display('./test/goldfish/*.JPEG')).show()
 # 
 # Before insert or search data, we need to have a collection. This step creates a new collection using configurations above. Please note that it will delete the collection first if it already exists.
 
-# In[7]:
-
 
 # Create milvus collection (delete first if exists)
 def create_milvus_collection(collection_name, dim):
-    if utility.has_collection(collection_name):
-        utility.drop_collection(collection_name)
+    # if utility.has_collection(collection_name):
+    #     utility.drop_collection(collection_name)
     
     fields = [
         FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
@@ -188,8 +146,6 @@ def create_milvus_collection(collection_name, dim):
 
 # Connect to Milvus with `HOST` & `PORT` and create collection with `COLLECTION_NAME` & `DIM`:
 
-# In[8]:
-
 
 # Connect to Milvus service
 connections.connect(host=HOST, port=PORT)
@@ -202,8 +158,6 @@ print(f'A new collection created: {COLLECTION_NAME}')
 # #### 2. Insert data <a class="anchor" id="step2"></a>
 # 
 # This step uses an **insert pipeline** to insert image embeddings into Milvus collection. The insert pipeline consists of the embedding pipeline and the Milvus insert operator.
-
-# In[9]:
 
 
 # Insert pipeline
@@ -219,8 +173,6 @@ p_insert = (
 
 # Insert all candidate images for  `INSERT_SRC`:
 
-# In[10]:
-
 
 # Insert data
 p_insert(INSERT_SRC)
@@ -232,9 +184,6 @@ print('Number of data inserted:', collection.num_entities)
 # #### 3. Search <a class="anchor" id="step3"></a>
 # 
 # An search pipeline queries image embeddings across Milvus collection given a pattern or csv of image path(s). It attaches a Milvus search operator to the embedding pipeline. The script below returns paths of query image and search results. You can modify `output()` to return values of different items. 
-
-# In[11]:
-
 
 # Search pipeline
 p_search_pre = (
@@ -249,19 +198,19 @@ p_search = p_search_pre.output('img_path', 'pred')
 
 # Query an example image 'test/goldfish/*.JPEG':
 
-# In[12]:
-
 
 # Search for example query image(s)
+# this is the query source, it can be a image too: QUERY_SRC = './test/1.JPEG' 
+
 collection.load()
-dc = p_search('test/goldfish/*.JPEG')
+# dc = p_search('test/goldfish/*.JPEG')
+# boost_ai: change search_img to be a main's argument, default if './*.jpeg'
+search_img='../image3.png'
+# search_img='test/toyshop/*.JPEG'
+dc = p_search(search_img)
 
 # Display search results with image paths
 DataCollection(dc).show()
-
-
-# In[13]:
-
 
 # Display search results with images, no need for implementation
 
@@ -279,6 +228,7 @@ p_search_img = (
                 .output('img', 'pred_images')
 )
 DataCollection(p_search_img('test/goldfish/*.JPEG')).show()
+# boost_ai:  save above p_search_im's image to the argument of --output.add()
 
 
 # ## Benchmark <a class="anchor" id="benchmark"></a>
@@ -291,8 +241,6 @@ DataCollection(p_search_img('test/goldfish/*.JPEG')).show()
 # For each query image, we expect to get images of the same class from the database. So we define a function which returns a list of image paths from candidates as the ground truth given a query image path. The ground truth should share the same class or category as the query image.
 # 
 # In addition, we manually define a function to calculate average precision given predictions and expected results.
-
-# In[14]:
 
 
 # Get ground truth by path of query image
@@ -319,15 +267,13 @@ def get_ap(pred: list, gt: list):
 # 
 # With helpful functions defined above, we are able to build a evaluateion pipeline based on the search pipeline. It searches for each query image and compares search results with ground truth. Then the pipeline outputs the Average Precision (AP) for each query.
 
-# In[15]:
-
 
 # Evaluation pipeline returns AP
-p_eval = (
-    p_search_pre.map('img_path', 'gt', ground_truth)
-                .map(('pred', 'gt'), 'ap', get_ap)
-                .output('ap')
-)
+# p_eval = (
+#     p_search_pre.map('img_path', 'gt', ground_truth)
+#                 .map(('pred', 'gt'), 'ap', get_ap)
+#                 .output('ap')
+# )
 
 
 # ### Performance
@@ -335,8 +281,6 @@ p_eval = (
 # Now we are able to run the evaluation pipeline over all test data. Then we calculate the mean value of AP of all queries to get the final performance in mAP.
 # 
 # At the end, a table records performance and qps of some popular models tested in our environment. You can try different models and configurations by your own. Please note that mAP and qps will be affected by versions of denpendencies and device. You are encouraged to explore more based on this tutorial.
-
-# In[16]:
 
 
 import time
@@ -365,8 +309,9 @@ print(f'qps: {len(res) / (end - start)}')
 # | vit_base_patch16_224 | 768 | 0.962 | 40 |
 # | tf_efficientnet_b7 | 2560 | 0.983 | 16 |
 
-# In[ ]:
 
 
-
-
+# boost_ai: add mian here, support 3 args:
+#  1. input: it should be path to insert-imgs;
+#  2. input: it should be path to q query-img;
+#  3. output: similart images will be saved to the directory path.
