@@ -21,6 +21,15 @@ COLLECTION_NAME = 'reverse_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
 
+def decode_image(image_path):
+    try:
+        image = cv2.imread(image_path)
+        if image is None:
+            raise RuntimeError(f"Error reading image: {image_path}")
+        return image
+    except Exception as e:
+        raise RuntimeError(f"Error reading image: {image_path}, Error: {e}")
+
 # Load image path
 def load_image(x):
     if x.endswith('csv'):
@@ -31,10 +40,21 @@ def load_image(x):
                 yield item[1]
     else:
         for item in glob(x):
-            yield item
+            try:
+                img = cv2.imread(item)
+                if img is not None:
+                    yield item
+                else:
+                    print(f"Error reading image: {item}, Skipping.")
+            except Exception as e:
+                print(f"Error reading image: {item}, Skipping. Error: {e}")
+
 
 # Create Milvus collection
 def create_milvus_collection(collection_name, dim, metric_type):
+    if utility.has_collection(collection_name):
+        utility.drop_collection(collection_name)
+        print("drop {collection_name}")
     fields = [
         FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
                     is_primary=True, auto_id=False),
@@ -49,6 +69,12 @@ def create_milvus_collection(collection_name, dim, metric_type):
         'params': {"nlist": 2048}
     }
     collection.create_index(field_name='embedding', index_params=index_params)
+    # Print the collection's items and their paths
+    print("Collection created:", collection_name)
+    entities = collection.num_entities
+    for i in range(entities):
+        entity = collection.get_entity_by_id(i)
+        print(f"Item Path for entity {i}: {entity.path}")
     return collection
 
 # Load and read images
@@ -72,84 +98,92 @@ def get_ap(pred: list, gt: list):
         ap = score / ct
     return ap
 
-def main(insert_src, query_src, output_dir):
+def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
     # Convert input paths to full paths
-    insert_src = Path(insert_src).resolve().as_posix()
-    query_src = Path(query_src).resolve().as_posix()
+    if not bypass_insert and insert_src:
+        insert_src = Path(insert_src).resolve().as_posix()
+    if not bypass_query and query_src:
+        query_src = Path(query_src).resolve().as_posix()
 
     # Connect to Milvus service
     connections.connect(host=HOST, port=PORT)
-
     # Embedding pipeline
     p_embed = (
         pipe.input('src')
             .flat_map('src', 'img_path', load_image)
-            .map('img_path', 'img', ops.image_decode())
+            .map('img_path', 'img', decode_image)
             .map('img', 'vec', ops.image_embedding.timm(model_name=MODEL, device=DEVICE))
     )
 
-    # Create collection
-    collection = create_milvus_collection(COLLECTION_NAME, DIM, METRIC_TYPE)
-    print(f'A new collection created: {COLLECTION_NAME}')
+    # Create or load collection
+    collection = None
+    if not bypass_insert and insert_src:
+        collection = create_milvus_collection(COLLECTION_NAME, DIM, METRIC_TYPE)
+        print(f'A new collection created: {COLLECTION_NAME}')
+        p_insert = (
+            p_embed.map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
+                        host=HOST,
+                        port=PORT,
+                        collection_name=COLLECTION_NAME
+                        ))
+                .output('mr')
+        )
+        # Execute the p_insert pipeline
+        insert_results = p_insert(insert_src)
 
-    # Insert pipeline
-    p_insert = (
-        p_embed.map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
-                    host=HOST,
-                    port=PORT,
-                    collection_name=COLLECTION_NAME
-                    ))
-            .output('mr')
-    )
+        # Check for errors in the insert results
+        # for result in insert_results.iter():
+        #     if result.error:
+        #         img_path = result.input['img_path'] if 'img_path' in result.input else None
+        #         print(f"Error inserting image: {img_path}, Skipping.")
+        #     else:
+        #         print("Image inserted successfully:", result.input['img_path'])
 
-    # Insert data
-    p_insert(insert_src)
 
-    # Search pipeline
-    p_search_pre = (
-        p_embed.map('vec', ('search_res'), ops.ann_search.milvus_client(
-                    host=HOST, port=PORT, limit=TOPK,
-                    collection_name=COLLECTION_NAME))
-            .map('search_res', 'pred', lambda x: [str(Path(y[0]).resolve()) for y in x])
-    )
-    p_search = p_search_pre.output('img_path', 'pred')
+    # Search for query image(s) if not bypassed
+    if not bypass_query and query_src:
+        # Search pipeline
+        p_search_pre = (
+            p_embed.map('vec', ('search_res'), ops.ann_search.milvus_client(
+                        host=HOST, port=PORT, limit=TOPK,
+                        collection_name=COLLECTION_NAME))
+                .map('search_res', 'pred', lambda x: [str(Path(y[0]).resolve()) for y in x])
+        )
+        p_search = p_search_pre.output('img_path', 'pred')
 
-    # Load collection
-    collection.load()
+        # Search for query image(s)
+        dc = p_search(query_src)
+        # Save search results
+        p_search_img = (
+            p_search_pre.map('pred', 'pred_images', read_images)
+                .output('img', 'pred_images')
+        )
+        search_results = p_search_img(query_src)
+        # DataCollection(search_results).to_directory(output_dir, add_source=True)
+        # Save search results to the output directory
+        search_results_dir = Path(output_dir) / "search_results"
+        search_results_dir.mkdir(parents=True, exist_ok=True)
 
-    # Search for query image(s)
-    dc = p_search(query_src)
+        # Convert DataQueue to a list of tuples
+        search_results_list = search_results.to_list()
 
-    # Save search results
-    p_search_img = (
-        p_search_pre.map('pred', 'pred_images', read_images)
-            .output('img', 'pred_images')
-    )
-    search_results = p_search_img(query_src)
-    # DataCollection(search_results).to_directory(output_dir, add_source=True)
-    # Save search results to the output directory
-    search_results_dir = Path(output_dir) / "search_results"
-    search_results_dir.mkdir(parents=True, exist_ok=True)
+        for idx, result in enumerate(search_results_list):
+            img_path = result[0]  # Assuming the first element is the image path
+            img_list = result[1]  # Assuming the second element is the list of images
 
-    # Convert DataQueue to a list of tuples
-    search_results_list = search_results.to_list()
+            # Save each image to the output directory
+            for i, img in enumerate(img_list):
+                try:
+                    img_filename = f"result_{idx}_{i}.jpg"
+                    img_save_path = search_results_dir / img_filename
 
-    for idx, result in enumerate(search_results_list):
-        img_path = result[0]  # Assuming the first element is the image path
-        img_list = result[1]  # Assuming the second element is the list of images
+                    # Convert the Image object to a PIL Image object
+                    pil_img = PILImage.fromarray(img)
 
-        # Save each image to the output directory
-        for i, img in enumerate(img_list):
-            img_filename = f"result_{idx}_{i}.jpg"
-            img_save_path = search_results_dir / img_filename
-
-            # Convert the Image object to a PIL Image object
-            pil_img = PILImage.fromarray(img)
-
-            # Save the PIL Image to the output directory
-            pil_img.save(img_save_path)            
-            
-            
+                    # Save the PIL Image to the output directory
+                    pil_img.save(img_save_path)
+                except Exception as e:
+                    print(f"Error saving image: {img_filename}, Skipping. Error: {e}")
         
     # # Evaluation pipeline
     # p_eval = (
@@ -174,9 +208,11 @@ def main(insert_src, query_src, output_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reverse Image Search powered by Towhee & Milvus")
-    parser.add_argument("--insert-src", type=str, required=True, help="Path to the CSV containing image data for insertion")
-    parser.add_argument("--query-src", type=str, required=True, help="Path to the query image")
-    parser.add_argument("--output-dir", type=str, required=True, help="Directory to save search results")
+    parser.add_argument("--insert-src", type=str, help="Path to the CSV containing image data for insertion")
+    parser.add_argument("--query-src", type=str, help="Path to the query image")
+    parser.add_argument("--output-dir", type=str, help="Directory to save search results")
+    parser.add_argument("--bypass-insert", action="store_true", help="Bypass the --insert-src process")
+    parser.add_argument("--bypass-query", action="store_true", help="Bypass the --query-src process")
     args = parser.parse_args()
 
-    main(args.insert_src, args.query_src, args.output_dir)
+    main(args.insert_src, args.query_src, args.output_dir, args.bypass_insert, args.bypass_query)
