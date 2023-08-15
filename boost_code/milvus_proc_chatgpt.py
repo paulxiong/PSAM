@@ -159,16 +159,16 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
                 .output('img', 'pred_images')
         )
         search_results = p_search_img(query_src)
-        # DataCollection(search_results).to_directory(output_dir, add_source=True)
+    
         # Save search results to the output directory
         search_results_dir = Path(output_dir) / "search_results"
         search_results_dir.mkdir(parents=True, exist_ok=True)
 
         # Convert DataQueue to a list of tuples
         search_results_list = search_results.to_list()
-
+        
         for idx, result in enumerate(search_results_list):
-            img_path = result[0]  # Assuming the first element is the image path
+            img_path = result[0]  # Assuming the first element is the query images 
             img_list = result[1]  # Assuming the second element is the list of images
 
             # Save each image to the output directory
@@ -184,7 +184,36 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
                     pil_img.save(img_save_path)
                 except Exception as e:
                     print(f"Error saving image: {img_filename}, Skipping. Error: {e}")
+                    
+        #boost_ai: in addition to original return, the search_results_list 
+        # should also return a image's path, which is identical to where it read, 
+        # the one in imgs.csv. So please modify needed code for this.
+        # Get image paths for returned IDs
+        # p_paths = (
+        #     p_search
+        #         .map('pred', 'ids', lambda x: [{'id': id} for id in x]) 
+        #         .map('ids', 'paths', ops.retrieve.milvus(HOST, PORT, COLLECTION_NAME))
+        # )
+
+        # Convert DataQueue to a list of tuples
+        search_results_list = dc.to_list()
+        # Write the similar image paths to a CSV file
+        csv_file_path = Path(output_dir) / "sim-img.csv"
+        with open(csv_file_path, 'w', newline='') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow(["id", "path", "label"])  # Write the header
+            for idx, result in enumerate(search_results_list):
+                img_path = result[0]  # Get the query image's path
+                similar_paths = result[1]  # Get the paths of similar images
+                # Write query image info
+                query_image_id = idx
+                csv_writer.writerow([query_image_id, img_path, "null"])
         
+                # Loop through similar images and write their info
+                for similar_path in similar_paths:
+                    query_image_id += 1  # Increase the id for each similar image
+                    csv_writer.writerow([query_image_id, similar_path, "null"])
+        print(f"Similar image paths written to {csv_file_path}")
     # # Evaluation pipeline
     # p_eval = (
     #     p_search_pre.map('img_path', 'gt', ground_truth)
@@ -210,7 +239,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reverse Image Search powered by Towhee & Milvus")
     parser.add_argument("--insert-src", type=str, help="Path to the CSV containing image data for insertion")
     parser.add_argument("--query-src", type=str, help="Path to the query image")
-    parser.add_argument("--output-dir", type=str, help="Directory to save search results")
+    parser.add_argument("--output-dir", type=str,default=".", help="Directory to save search results")
     parser.add_argument("--bypass-insert", action="store_true", help="Bypass the --insert-src process")
     parser.add_argument("--bypass-query", action="store_true", help="Bypass the --query-src process")
     args = parser.parse_args()
