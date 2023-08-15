@@ -199,7 +199,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         search_results_list = dc.to_list()
         # Write the similar image paths to a CSV file
         # Get the directory path of the --insert-src file
-        sim_img_csv="。sim-img.csv"
+        sim_img_csv="。sim-imgs.csv"
         try:
             insert_src_dir = Path(insert_src).resolve().parent
             # Combine the directory path with the sim-img.csv filename
