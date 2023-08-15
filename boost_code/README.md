@@ -42,7 +42,7 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
 
 ## Examples
 
-### Insert Images and Search for Similar Images
+### Search for Similar Images and output similar-image-absolute-path to "。sim-imgs.csv" file located in dir of --insert-src
 
 To search for similar images and output 。sim-imgs.csv to same dir of /your_dir/insert_src.csv in one command:
 
