@@ -21,33 +21,33 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
 1. Insert images into the collection:
 
    ```bash
-   python app.py --insert-src /path/to/insert/src.csv
+   python search.py --bypass-insert --insert-src /path/to/insert/src.csv --query-src /path/to/query/image.jpg
    ```
 
 2. Search for similar images:
 
    ```bash
-   python app.py --query-src /path/to/query/image.jpg --output-dir /path/to/output/directory
+   python search.py --query-src /path/to/query/image.jpg --output-dir /path/to/output/directory
    ```
 
 3. Bypass specific processes:
 
    ```bash
-   python app.py --query-src /path/to/query/image.jpg --bypass-insert
+   python search.py --query-src /path/to/query/image.jpg --bypass-insert
    ```
 
    ```bash
-   python app.py --insert-src /path/to/insert/src.csv --bypass-query
+   python search.py --bypass-query --insert-src /path/to/insert/src.csv
    ```
 
 ## Examples
 
-### Insert Images
+### Insert Images and Search for Similar Images
 
-To insert images into the collection, provide a CSV file with image paths:
+To insert images into the collection and search for similar images in one command:
 
 ```bash
-python app.py --insert-src insert_src.csv
+python search.py --bypass-insert --insert-src insert_src.csv --query-src query_image.jpg
 ```
 
 ### Search for Similar Images
@@ -55,7 +55,7 @@ python app.py --insert-src insert_src.csv
 To search for similar images based on a query image, provide the query image and specify the output directory:
 
 ```bash
-python app.py --query-src query_image.jpg --output-dir search_results
+python search.py --query-src query_image.jpg --output-dir search_results
 ```
 
 ### Bypass Specific Processes
@@ -63,16 +63,16 @@ python app.py --query-src query_image.jpg --output-dir search_results
 To bypass either the insertion or query process, use the `--bypass-insert` or `--bypass-query` flags:
 
 ```bash
-python app.py --query-src query_image.jpg --bypass-insert
+python search.py --query-src query_image.jpg --bypass-insert
 ```
 
 ```bash
-python app.py --insert-src insert_src.csv --bypass-query
+python search.py --bypass-query --insert-src insert_src.csv
 ```
 
 ## Output
 
-The app saves search results in the specified output directory. Additionally, a `sim-img.csv` file is created containing the paths of the query image and its similar images.
+The app saves search results in the specified output directory. Additionally, a `。sim-imgs.csv` file is created containing the paths of the query image and its similar images.
 
 ## Dependencies
 
