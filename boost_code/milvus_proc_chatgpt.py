@@ -198,7 +198,14 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         # Convert DataQueue to a list of tuples
         search_results_list = dc.to_list()
         # Write the similar image paths to a CSV file
-        csv_file_path = Path(output_dir) / "sim-img.csv"
+        # Get the directory path of the --insert-src file
+        sim_img_csv="。sim-img.csv"
+        try:
+            insert_src_dir = Path(insert_src).resolve().parent
+            # Combine the directory path with the sim-img.csv filename
+            csv_file_path = insert_src_dir / sim_img_csv 
+        except:
+            csv_file_path = Path(output_dir) / sim_img_csv
         with open(csv_file_path, 'w', newline='') as csv_file:
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(["id", "path", "label"])  # Write the header
