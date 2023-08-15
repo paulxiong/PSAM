@@ -13,9 +13,15 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
 2. Install the required packages:
 
    ```bash
-   pip install pymilvus towhee opencv-python-headless pillow
+   pip install pymilvus==2.2.1 towhee opencv-python-headless pillow
    ```
+3. Launch Milvus docker:
 
+   ```bash
+   docker-compose up -d
+   ```
+   This command starts all the services defined in your docker-compose.yml file and runs them in the background (detached mode).
+   
 ## Usage
 
 1. Insert images into the collection:
