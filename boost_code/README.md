@@ -41,14 +41,22 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
    ```
 
 ## Examples
+### Insert Images Only, Searching later
 
-### Search for Similar Images and output similar-image-absolute-paths to file "。sim-imgs.csv"
+To insert images into dabase only:
 
-To search for similar images and output ```。sim-imgs.csv``` to same dir of /your_dir/insert_src.csv in one command:
+```bash
+python search.py --bypass-query --insert-src /path/to/insert/src.csv
+```
+
+### Search for Similar Images and output to `。sim-imgs.csv`
+
+To search for similar images and output `/your_dir/。sim-imgs.csv` in one command:
 
 ```bash
 python search.py --bypass-insert --insert-src /your_dir/insert_src.csv --query-src query_image.jpg
 ```
+(`--insert-src /your_dir/insert_src.csv` will not really apply but given `。sim-imgs.csv` a directory. )
 
 ### Search for Similar Images
 
