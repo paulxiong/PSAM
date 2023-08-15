@@ -42,9 +42,9 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
 
 ## Examples
 
-### Search for Similar Images and output similar-image-absolute-path to "。sim-imgs.csv" file located in dir of --insert-src
+### Search for Similar Images and output similar-image-absolute-paths to file "。sim-imgs.csv"
 
-To search for similar images and output 。sim-imgs.csv to same dir of /your_dir/insert_src.csv in one command:
+To search for similar images and output ```。sim-imgs.csv``` to same dir of /your_dir/insert_src.csv in one command:
 
 ```bash
 python search.py --bypass-insert --insert-src /your_dir/insert_src.csv --query-src query_image.jpg
