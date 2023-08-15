@@ -44,10 +44,10 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
 
 ### Insert Images and Search for Similar Images
 
-To insert images into the collection and search for similar images in one command:
+To search for similar images and output 。sim-imgs.csv to same dir of /your_dir/insert_src.csv in one command:
 
 ```bash
-python search.py --bypass-insert --insert-src insert_src.csv --query-src query_image.jpg
+python search.py --bypass-insert --insert-src /your_dir/insert_src.csv --query-src query_image.jpg
 ```
 
 ### Search for Similar Images
