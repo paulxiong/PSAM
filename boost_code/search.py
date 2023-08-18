@@ -6,6 +6,7 @@ from towhee.types.image import Image
 import time
 import argparse
 from PIL import Image as PILImage
+import sqlite3  # Add this line to import the sqlite3 module
 
 from towhee import pipe, ops, DataCollection
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
@@ -20,6 +21,17 @@ DIM = 2048
 COLLECTION_NAME = 'reverse_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
+
+def load_image_from_database(db_path):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    cursor.execute("SELECT path FROM images")  # Assuming 'images' is the table name
+    image_paths = [row[0] for row in cursor.fetchall()]
+    connection.close()
+    if len(image_paths) > 0:
+        return image_paths[-1]  # Return the last image path from the database
+    else:
+        raise RuntimeError("No image paths found in the database")
 
 def decode_image(image_path):
     try:
@@ -103,6 +115,11 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
     if not bypass_insert and insert_src:
         insert_src = Path(insert_src).resolve().as_posix()
     if not bypass_query and query_src:
+        query_src = Path(query_src).resolve().as_posix()
+        if query_src.endswith('.db'):
+            query_src = load_image_from_database(query_src)
+        # else:
+        #     query_src = list(load_image(query_src))
         query_src = Path(query_src).resolve().as_posix()
 
     # Connect to Milvus service
