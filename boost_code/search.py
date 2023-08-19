@@ -25,7 +25,7 @@ METRIC_TYPE = 'L2'
 def load_image_from_database(db_path):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
-    cursor.execute("SELECT path FROM images")  # Assuming 'images' is the table name
+    cursor.execute("SELECT path FROM query_image_path")  # Assuming 'images' is the table name
     image_paths = [row[0] for row in cursor.fetchall()]
     connection.close()
     if len(image_paths) > 0:
