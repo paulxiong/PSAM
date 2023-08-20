@@ -64,29 +64,26 @@ def load_image(x):
 
 # Create Milvus collection
 def create_milvus_collection(collection_name, dim, metric_type):
-    if utility.has_collection(collection_name):
-        utility.drop_collection(collection_name)
-        print("drop {collection_name}")
-    fields = [
-        FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
-                    is_primary=True, auto_id=False),
-        FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, description='image embedding vectors', dim=dim)
-    ]
-    schema = CollectionSchema(fields=fields, description='reverse image search')
-    collection = Collection(name=collection_name, schema=schema)
+    if not utility.has_collection(collection_name):
+        fields = [
+            FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
+                        is_primary=True, auto_id=False),
+            FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, description='image embedding vectors', dim=dim)
+        ]
+        schema = CollectionSchema(fields=fields, description='reverse image search')
+        collection = Collection(name=collection_name, schema=schema)
 
-    index_params = {
-        'metric_type': metric_type,
-        'index_type': INDEX_TYPE,
-        'params': {"nlist": 2048}
-    }
-    collection.create_index(field_name='embedding', index_params=index_params)
-    # Print the collection's items and their paths
-    print("Collection created:", collection_name)
-    entities = collection.num_entities
-    for i in range(entities):
-        entity = collection.get_entity_by_id(i)
-        print(f"Item Path for entity {i}: {entity.path}")
+        index_params = {
+            'metric_type': metric_type,
+            'index_type': INDEX_TYPE,
+            'params': {"nlist": 2048}
+        }
+        collection.create_index(field_name='embedding', index_params=index_params)
+        # Print the collection's items and their paths
+        print("Collection created:", collection_name)
+    else:
+            collection = Collection(name=collection_name)
+            print("Collection already exists:", collection_name)
     return collection
 
 # Load and read images
