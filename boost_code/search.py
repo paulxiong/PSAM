@@ -22,15 +22,21 @@ COLLECTION_NAME = 'reverse_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
 
+
+
 def load_image_from_database(db_path):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute("SELECT path FROM query_image_path")  # Assuming 'images' is the table name
     image_paths = [row[0] for row in cursor.fetchall()]
-    connection.close()
     if len(image_paths) > 0:
-        return image_paths[-1]  # Return the last image path from the database
+        last_image_path = image_paths[-1]
+        cursor.execute("UPDATE query_image_path SET op = ? WHERE path = ?", ('pong', last_image_path))
+        connection.commit()
+        connection.close()
+        return last_image_path
     else:
+        connection.close()
         raise RuntimeError("No image paths found in the database")
 
 def decode_image(image_path):
