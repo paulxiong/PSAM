@@ -92,9 +92,13 @@ def process_external_csv(db_connection, external_csv_path):
 
 def main(file_to_monitor, python_script, *python_args):
     print("Monitoring started...")
-    last_modified = os.path.getmtime(file_to_monitor)
 
-    # db_connection = sqlite3.connect("images_database.db")
+    # Wait for the file to appear
+    while not os.path.exists(file_to_monitor):
+        print(f"Waiting for {file_to_monitor} to appear...")
+        time.sleep(1)
+
+    last_modified = os.path.getmtime(file_to_monitor)
     db_connection = sqlite3.connect(file_to_monitor)
     try:
         create_img_path_table(db_connection)
