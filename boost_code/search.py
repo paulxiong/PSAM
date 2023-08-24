@@ -22,16 +22,23 @@ COLLECTION_NAME = 'reverse_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
 
+
+
 def load_image_from_database(db_path):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
-    cursor.execute("SELECT path FROM query_image_path")  # Assuming 'images' is the table name
+    cursor.execute("SELECT path FROM query_image_path WHERE op='ping'")  # Assuming 'images' is the table name
     image_paths = [row[0] for row in cursor.fetchall()]
-    connection.close()
     if len(image_paths) > 0:
-        return image_paths[-1]  # Return the last image path from the database
+        last_image_path = image_paths[-1]
+        cursor.execute("UPDATE query_image_path SET op = ? WHERE path = ?", ('pong', last_image_path))
+        connection.commit()
+        connection.close()
+        return last_image_path
     else:
-        raise RuntimeError("No image paths found in the database")
+        connection.close()
+        print("No query image found in the database by SELECT path FROM query_image_path WHERE op='ping'")
+        return None
 
 def decode_image(image_path):
     try:
@@ -64,29 +71,26 @@ def load_image(x):
 
 # Create Milvus collection
 def create_milvus_collection(collection_name, dim, metric_type):
-    if utility.has_collection(collection_name):
-        utility.drop_collection(collection_name)
-        print("drop {collection_name}")
-    fields = [
-        FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
-                    is_primary=True, auto_id=False),
-        FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, description='image embedding vectors', dim=dim)
-    ]
-    schema = CollectionSchema(fields=fields, description='reverse image search')
-    collection = Collection(name=collection_name, schema=schema)
+    if not utility.has_collection(collection_name):
+        fields = [
+            FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
+                        is_primary=True, auto_id=False),
+            FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, description='image embedding vectors', dim=dim)
+        ]
+        schema = CollectionSchema(fields=fields, description='reverse image search')
+        collection = Collection(name=collection_name, schema=schema)
 
-    index_params = {
-        'metric_type': metric_type,
-        'index_type': INDEX_TYPE,
-        'params': {"nlist": 2048}
-    }
-    collection.create_index(field_name='embedding', index_params=index_params)
-    # Print the collection's items and their paths
-    print("Collection created:", collection_name)
-    entities = collection.num_entities
-    for i in range(entities):
-        entity = collection.get_entity_by_id(i)
-        print(f"Item Path for entity {i}: {entity.path}")
+        index_params = {
+            'metric_type': metric_type,
+            'index_type': INDEX_TYPE,
+            'params': {"nlist": 2048}
+        }
+        collection.create_index(field_name='embedding', index_params=index_params)
+        # Print the collection's items and their paths
+        print("Collection created:", collection_name)
+    else:
+            collection = Collection(name=collection_name)
+            print("Collection already exists:", collection_name)
     return collection
 
 # Load and read images
@@ -120,8 +124,11 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
             query_src = load_image_from_database(query_src)
         # else:
         #     query_src = list(load_image(query_src))
-        query_src = Path(query_src).resolve().as_posix()
-
+        if query_src:
+            query_src = Path(query_src).resolve().as_posix()
+        else:
+            print("No query image, exit")
+            return
     # Connect to Milvus service
     connections.connect(host=HOST, port=PORT)
     # Embedding pipeline
@@ -232,12 +239,12 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
                 # Write query image info
                 query_image_id = idx
                 csv_writer.writerow([query_image_id, img_path, "null"])
+                print(f"Similar image {similar_paths} written to {csv_file_path}")
         
                 # Loop through similar images and write their info
                 for similar_path in similar_paths:
                     query_image_id += 1  # Increase the id for each similar image
                     csv_writer.writerow([query_image_id, similar_path, "null"])
-        print(f"Similar image paths written to {csv_file_path}")
     # # Evaluation pipeline
     # p_eval = (
     #     p_search_pre.map('img_path', 'gt', ground_truth)
