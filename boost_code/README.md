@@ -13,9 +13,15 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
 2. Install the required packages:
 
    ```bash
-   pip install pymilvus towhee opencv-python-headless pillow
+   pip install pymilvus==2.2.1 towhee opencv-python-headless pillow
    ```
+3. Launch Milvus docker:
 
+   ```bash
+   docker-compose up -d
+   ```
+   This command starts all the services defined in your docker-compose.yml file and runs them in the background (detached mode).
+   
 ## Usage
 
 1. Insert images into the collection:
@@ -41,14 +47,22 @@ This app performs reverse image search using Towhee and Milvus. Given a query im
    ```
 
 ## Examples
+### Insert Images Only, Searching later
 
-### Insert Images and Search for Similar Images
-
-To insert images into the collection and search for similar images in one command:
+To insert images into dabase only:
 
 ```bash
-python search.py --bypass-insert --insert-src insert_src.csv --query-src query_image.jpg
+python search.py --bypass-query --insert-src /path/to/insert/src.csv
 ```
+
+### Search for Similar Images and output to `。sim-imgs.csv`
+
+To search for similar images and output `/your_dir/。sim-imgs.csv` in one command:
+
+```bash
+python search.py --bypass-insert --insert-src /your_dir/insert_src.csv --query-src query_image.jpg
+```
+(`--insert-src /your_dir/insert_src.csv` will not really apply but given `。sim-imgs.csv` a directory. )
 
 ### Search for Similar Images
 
