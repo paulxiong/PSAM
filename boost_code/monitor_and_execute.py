@@ -58,10 +58,6 @@ def update_last_insert_csv_path(db_connection, new_path):
     
     db_connection.commit()
 
-
-
-
-
 def mark_csv_path_as_processed(db_connection, processed_path):
     cursor = db_connection.cursor()
     cursor.execute("DELETE FROM insert_csv_path WHERE path = ?", (processed_path,))
@@ -93,6 +89,7 @@ def process_external_csv(db_connection, external_csv_path):
         db_connection.commit()
     return new_path_list
 
+
 def main(file_to_monitor, python_script, *python_args):
     print("Monitoring started...")
     last_modified = os.path.getmtime(file_to_monitor)
@@ -117,10 +114,6 @@ def main(file_to_monitor, python_script, *python_args):
                         insert_csv_path = f"\"{insert_csv_path}\""
                         subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path])
                         print(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path])
-                # python monitor_and_execute.py /Users/boxiong/Library/Containers/
-                # com.example.tiktokClone/Data/Documents/image_database.db 
-                # search.py --bypass-insert --insert-src ~/Downloads/test/nothing.csv 
-                # --query-src /Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db
                 # boost-ai-began: add a table "last-insert-src-path-dir" to database;
                 else:
                     last_insert_csv_path =retrieve_csv_path(db_connection,"last_insert_csv_path")
@@ -148,3 +141,5 @@ if __name__ == "__main__":
         python_script = sys.argv[2]
         python_args = sys.argv[3:]
         main(file_to_monitor, python_script, *python_args)
+# following line is the cmd should run as the back end of TikTok Clone.
+# python monitor_and_execute.py /Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db search.py 
