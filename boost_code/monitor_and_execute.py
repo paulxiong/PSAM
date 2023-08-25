@@ -115,7 +115,7 @@ def main(file_to_monitor, python_script, *python_args):
                     mark_csv_path_as_processed(db_connection, insert_csv_path)  # Mark path as processed
                     update_last_insert_csv_path(db_connection, insert_csv_path)  # Update or create table
                     if os.path.exists(insert_csv_path) and process_external_csv(db_connection, insert_csv_path):
-                        insert_csv_path = f"\"{insert_csv_path}\""
+                        insert_csv_path = f'{insert_csv_path}'
                         subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path])
                         print(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path])
                 # boost-ai-began: add a table "last-insert-src-path-dir" to database;

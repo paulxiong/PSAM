@@ -51,11 +51,14 @@ def decode_image(image_path):
 
 # Load image path
 def load_image(x):
+    print(f'insert loadin_image reading {x}')
+    # x='/Users/boxiong/Downloads/test/1.csv'
     if x.endswith('csv'):
         with open(x) as f:
             reader = csv.reader(f)
             next(reader)
             for item in reader:
+                print(f"inserting image: {item[1]}")
                 yield item[1]
     else:
         for item in glob(x):
@@ -67,7 +70,6 @@ def load_image(x):
                     print(f"Error reading image: {item}, Skipping.")
             except Exception as e:
                 print(f"Error reading image: {item}, Skipping. Error: {e}")
-
 
 # Create Milvus collection
 def create_milvus_collection(collection_name, dim, metric_type):
@@ -118,6 +120,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
     # Convert input paths to full paths
     if not bypass_insert and insert_src:
         insert_src = Path(insert_src).resolve().as_posix()
+        print(f'main insert_src {insert_src}')
     if not bypass_query and query_src:
         query_src = Path(query_src).resolve().as_posix()
         if query_src.endswith('.db'):
@@ -143,7 +146,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
     collection = None
     if not bypass_insert and insert_src:
         collection = create_milvus_collection(COLLECTION_NAME, DIM, METRIC_TYPE)
-        print(f'A new collection created: {COLLECTION_NAME}')
+        print(f'The collection found: {COLLECTION_NAME}')
         p_insert = (
             p_embed.map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
                         host=HOST,
@@ -155,14 +158,14 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         # Execute the p_insert pipeline
         insert_results = p_insert(insert_src)
 
-        # Check for errors in the insert results
-        # for result in insert_results.iter():
+        # Convert DataQueue to a list and then iterate over the list
+        # insert_results_list = insert_results.to_list()
+        # for result in insert_results_list:
         #     if result.error:
         #         img_path = result.input['img_path'] if 'img_path' in result.input else None
         #         print(f"Error inserting image: {img_path}, Skipping.")
         #     else:
         #         print("Image inserted successfully:", result.input['img_path'])
-
 
     # Search for query image(s) if not bypassed
     if not bypass_query and query_src:
@@ -274,5 +277,5 @@ if __name__ == "__main__":
     parser.add_argument("--bypass-insert", action="store_true", help="Bypass the --insert-src process")
     parser.add_argument("--bypass-query", action="store_true", help="Bypass the --query-src process")
     args = parser.parse_args()
-
+    print(f'__main__ {args.insert_src}')
     main(args.insert_src, args.query_src, args.output_dir, args.bypass_insert, args.bypass_query)
