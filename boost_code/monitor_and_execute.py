@@ -22,21 +22,13 @@ def retrieve_csv_path(db_connection,tablex):
     cursor = db_connection.cursor()
     query = f"SELECT path FROM {tablex} LIMIT 1;"
     cursor.execute(query)
-    # cursor.execute("SELECT path FROM ? LIMIT 1;",tablex)
     result = cursor.fetchone()
-    # if result:
-    #     cursor.execute("UPDATE last_insert_csv_path SET path = ? WHERE id = ?", (result[0], 0))
-    #     return result[0]
-    # cursor.execute("SELECT path FROM last_insert_csv_path LIMIT 1;")
-    # result = cursor.fetchone()
     if result:
         return result[0]
     return None
 
 def update_last_insert_csv_path(db_connection, new_path):
     cursor = db_connection.cursor()
-    
-    # Check if the table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='last_insert_csv_path';")
     table_exists = cursor.fetchone()
     
@@ -44,20 +36,18 @@ def update_last_insert_csv_path(db_connection, new_path):
         # Check if there are any rows in the table
         cursor.execute("SELECT COUNT(*) FROM last_insert_csv_path;")
         row_count = cursor.fetchone()[0]
-        
         if row_count > 0:
             # If there are rows, update the existing record
-            cursor.execute("UPDATE last_insert_csv_path SET path = ? WHERE id = ?", (new_path, 0))
-        # else:
-        #     # If there are no rows, insert a new record
-        #     cursor.execute("INSERT INTO last_insert_csv_path (path) VALUES (?)", (new_path,))
+            cursor.execute("UPDATE last_insert_csv_path SET path = ? WHERE id = ?", (new_path, 1))
+        else:
+            cursor.execute("INSERT INTO last_insert_csv_path (path) VALUES (?)", (new_path,))
+            
     else:
         # If the table doesn't exist, create it and insert a record
         cursor.execute('''CREATE TABLE last_insert_csv_path (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             path TEXT NOT NULL);''')
         cursor.execute("INSERT INTO last_insert_csv_path (path) VALUES (?)", (new_path,))
-    
     db_connection.commit()
 
 def mark_csv_path_as_processed(db_connection, processed_path):
