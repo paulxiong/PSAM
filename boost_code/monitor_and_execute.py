@@ -11,6 +11,8 @@ def create_img_path_table(db_connection):
     cursor.execute('''CREATE TABLE IF NOT EXISTS img_path (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         path TEXT NOT NULL);''')
+    path="abcdefg"
+    cursor.execute("INSERT INTO img_path (path) VALUES (?)", (path,))                        
     cursor.execute('''CREATE TABLE IF NOT EXISTS last_insert_csv_path (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         path TEXT NOT NULL);''')
@@ -46,9 +48,9 @@ def update_last_insert_csv_path(db_connection, new_path):
         if row_count > 0:
             # If there are rows, update the existing record
             cursor.execute("UPDATE last_insert_csv_path SET path = ? WHERE id = ?", (new_path, 0))
-        else:
-            # If there are no rows, insert a new record
-            cursor.execute("INSERT INTO last_insert_csv_path (path) VALUES (?)", (new_path,))
+        # else:
+        #     # If there are no rows, insert a new record
+        #     cursor.execute("INSERT INTO last_insert_csv_path (path) VALUES (?)", (new_path,))
     else:
         # If the table doesn't exist, create it and insert a record
         cursor.execute('''CREATE TABLE last_insert_csv_path (
@@ -75,8 +77,8 @@ def process_external_csv(db_connection, external_csv_path):
                 cursor.execute("SELECT * FROM img_path WHERE path=?", (path,))
                 existing_path = cursor.fetchone()
                 if not existing_path:
-                    cursor.execute("INSERT INTO img_path (path) VALUES (?)", (path,))
-                    db_connection.commit()
+                    # cursor.execute("INSERT INTO img_path (path) VALUES (?)", (path,))
+                    # db_connection.commit()
                     new_path_list.append(path)
                 else:
                     with open(external_csv_path, 'r+') as csv_file:
@@ -116,22 +118,16 @@ def main(file_to_monitor, python_script, *python_args):
                     update_last_insert_csv_path(db_connection, insert_csv_path)  # Update or create table
                     if os.path.exists(insert_csv_path) and process_external_csv(db_connection, insert_csv_path):
                         insert_csv_path = f'{insert_csv_path}'
-                        subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path])
-                        print(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path])
-                # boost-ai-began: add a table "last-insert-src-path-dir" to database;
+                        print(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
+                        subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
+               # boost-ai-began: add a table "last-insert-src-path-dir" to database;
+                last_insert_csv_path =retrieve_csv_path(db_connection,"last_insert_csv_path")
+                if last_insert_csv_path:
+                    python_args = ["--bypass-insert", "--insert-src", last_insert_csv_path, "--query-src", file_to_monitor]
+                    print(["python3", python_script] + python_args)
+                    subprocess.run(["python3", python_script] + python_args)
                 else:
-                    last_insert_csv_path =retrieve_csv_path(db_connection,"last_insert_csv_path")
-                    if last_insert_csv_path:
-                        # last_insert_csv_path=f"\"{last_insert_csv_path}\""
-                        python_args = ["--bypass-insert", "--insert-src", last_insert_csv_path, "--query-src", file_to_monitor]
-                        subprocess.run(["python3", python_script] + python_args)
-                        print(["python3", python_script] + python_args)
-                        # python_args = ["--bypass-insert", "--insert-src",last_insert_csv_path," --query-src",file_to_monitor]
-                        # subprocess.run(["python3", python_script] + list(python_args))                        
-                    else:
-                        print(
-                        "insert_csv_path is None, warning..." 
-                        )
+                    print( "insert_csv_path is None, warning..." )
     except KeyboardInterrupt:
         print("Monitoring stopped.")
     finally:

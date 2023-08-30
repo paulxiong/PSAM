@@ -21,8 +21,7 @@ DIM = 2048
 COLLECTION_NAME = 'reverse_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
-
-
+# global DB_path  # Declare DB_path as a global variable and initialize it
 
 def load_image_from_database(db_path):
     connection = sqlite3.connect(db_path)
@@ -49,9 +48,31 @@ def decode_image(image_path):
     except Exception as e:
         raise RuntimeError(f"Error reading image: {image_path}, Error: {e}")
 
+        
+#update_imgs_in_db
+def update_imgs_in_db(loading_path):
+    global DB_path  # Add this line to indicate that you're modifying the global variable
+
+    if DB_path:
+        connection = sqlite3.connect(DB_path)
+        print("update_imgs_in_db established: {DB_path}")
+    else:
+        print("update_imgs_in_db Error: DB_path is NULL")
+    cursor = connection.cursor()
+    if loading_path is None:
+        print("update_imgs_in_db is None")
+    for path in loading_path:
+        cursor.execute("INSERT INTO img_path (path) VALUES (?)", (path,))
+        print(f'loading_path: {path}')
+        connection.commit()
+    connection.close()
+        
+
 # Load image path
+loading_path=[]
 def load_image(x):
     print(f'insert loadin_image reading {x}')
+
     # x='/Users/boxiong/Downloads/test/1.csv'
     if x.endswith('csv'):
         with open(x) as f:
@@ -59,6 +80,7 @@ def load_image(x):
             next(reader)
             for item in reader:
                 print(f"inserting image: {item[1]}")
+                loading_path.append(item[1])
                 yield item[1]
     else:
         for item in glob(x):
@@ -118,6 +140,10 @@ def get_ap(pred: list, gt: list):
 
 def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
     # Convert input paths to full paths
+
+    global DB_path
+    DB_path = Path(query_src).resolve().as_posix() 
+    print(f"DB_path : {DB_path}")
     if not bypass_insert and insert_src:
         insert_src = Path(insert_src).resolve().as_posix()
         print(f'main insert_src {insert_src}')
@@ -157,7 +183,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         )
         # Execute the p_insert pipeline
         insert_results = p_insert(insert_src)
-
+        update_imgs_in_db(loading_path)
         # Convert DataQueue to a list and then iterate over the list
         # insert_results_list = insert_results.to_list()
         # for result in insert_results_list:
