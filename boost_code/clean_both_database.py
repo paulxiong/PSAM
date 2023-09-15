@@ -24,6 +24,6 @@ milvus.drop_collection(collection_name='reverse_image_search')
 print('Done!')
 
 # Additional task
-subprocess.run(['python', 'monitor_and_execute.py', 
-                '/Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db', 
-                'search.py'])
+# subprocess.run(['python', 'monitor_and_execute.py', 
+#                 '/Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db', 
+#                 'search.py'])
