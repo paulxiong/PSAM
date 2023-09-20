@@ -2,6 +2,7 @@ import csv
 from glob import glob
 from pathlib import Path
 import cv2
+from pillow_heif import register_heif_opener 
 from towhee.types.image import Image
 import time
 import argparse
@@ -10,6 +11,7 @@ import sqlite3  # Add this line to import the sqlite3 module
 
 from towhee import pipe, ops, DataCollection
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
+import numpy as np
 
 # Global parameters
 MODEL = 'resnet50'
@@ -22,6 +24,7 @@ COLLECTION_NAME = 'reverse_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
 # global DB_path  # Declare DB_path as a global variable and initialize it
+register_heif_opener()
 
 def load_image_from_database(db_path):
     connection = sqlite3.connect(db_path)
@@ -39,14 +42,30 @@ def load_image_from_database(db_path):
         print("No query image found in the database by SELECT path FROM query_image_path WHERE op='ping'")
         return None
 
+# def decode_image(image_path):
+#     try:
+#         image = cv2.imread(image_path)
+#         if image is None:
+#             raise RuntimeError(f"Error reading image: {image_path}")
+#         return image
+#     except Exception as e:
+#         raise RuntimeError(f"Error reading image: {image_path}, Error: {e}")
 def decode_image(image_path):
     try:
-        image = cv2.imread(image_path)
+        if image_path.lower().endswith('.heic'):
+            pil_image = PILImage.open(image_path)
+            image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+            # heif_file = pyheif.read(image_path)
+            # image = cv2.cvtColor(heif_file.to_rgb().tobytes(), cv2.COLOR_RGB2BGR)
+        else:
+            image = cv2.imread(image_path)
+        
         if image is None:
-            raise RuntimeError(f"Error reading image: {image_path}")
+            raise RuntimeError(f"Error reading None image: {image_path}")
+        
         return image
     except Exception as e:
-        raise RuntimeError(f"Error reading image: {image_path}, Error: {e}")
+        raise RuntimeError(f"Error reading image in decode_image: {image_path}, Error: {e}")
 
         
 #update_imgs_in_db
@@ -85,7 +104,14 @@ def load_image(x):
     else:
         for item in glob(x):
             try:
-                img = cv2.imread(item)
+                image_path = item
+                if image_path.lower().endswith('.heic'):
+                    pil_image = PILImage.open(image_path)
+                    img = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+                    # img = pyheif.read(image_path)
+                    # img = cv2.cvtColor(heif_file.to_rgb().tobytes(), cv2.COLOR_RGB2BGR)    
+                else:
+                    img = cv2.imread(item)
                 if img is not None:
                     yield item
                 else:
@@ -121,7 +147,17 @@ def create_milvus_collection(collection_name, dim, metric_type):
 def read_images(img_paths):
     imgs = []
     for p in img_paths:
-        imgs.append(Image(cv2.imread(p), 'BGR'))
+        # imgs.append(Image(cv2.imread(p), 'BGR'))
+        if p.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.tif')):
+            # If the file has a common image extension, use cv2.imread
+            imgs.append(cv2.imread(p))
+        elif p.lower().endswith('.heic'):
+            pil_image = PILImage.open(p)
+            img = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+            imgs.append(img)
+        else:
+            raise ValueError(f"Unsupported image format for file: {p}")
+            
     return imgs
 
 # Calculate Average Precision by comparing predictions and ground truths
@@ -195,6 +231,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
 
     # Search for query image(s) if not bypassed
     if not bypass_query and query_src:
+        print("searching ....")
         # Search pipeline
         p_search_pre = (
             p_embed.map('vec', ('search_res'), ops.ann_search.milvus_client(
@@ -213,6 +250,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         )
         search_results = p_search_img(query_src)
     
+        print("searching 1 ....")
         # Save search results to the output directory
         search_results_dir = Path(output_dir) / "search_results"
         search_results_dir.mkdir(parents=True, exist_ok=True)
