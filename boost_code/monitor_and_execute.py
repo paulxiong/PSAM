@@ -108,16 +108,29 @@ def main(file_to_monitor, python_script, *python_args):
                     update_last_insert_csv_path(db_connection, insert_csv_path)  # Update or create table
                     if os.path.exists(insert_csv_path) and process_external_csv(db_connection, insert_csv_path):
                         insert_csv_path = f'{insert_csv_path}'
+                        print(f'*******************   insert ****************')
                         print(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
+                        print("\n")
                         subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
                # boost-ai-began: add a table "last-insert-src-path-dir" to database;
                 last_insert_csv_path =retrieve_csv_path(db_connection,"last_insert_csv_path")
                 if last_insert_csv_path:
-                    python_args = ["--bypass-insert", "--insert-src", last_insert_csv_path, "--query-src", file_to_monitor]
-                    print(["python3", python_script] + python_args)
-                    subprocess.run(["python3", python_script] + python_args)
+
+                    cursor = db_connection.cursor()
+                    cursor.execute("SELECT path FROM query_image_path WHERE op='ping'")  # Assuming 'images' is the table name
+                    image_paths = [row[0] for row in cursor.fetchall()]
+                    if len(image_paths) > 0:
+                        python_args = ["--bypass-insert", "--insert-src", last_insert_csv_path, "--query-src", file_to_monitor]
+                        print(f'*******************   Search ****************')
+                        print(["python3", python_script] + python_args)
+                        print("\n")
+                        # db_connection.close()
+                        subprocess.run(["python3", python_script] + python_args)
+                    else:
+                        # db_connection.close()
+                        print("No query image found in the database by SELECT path FROM query_image_path WHERE op='ping'")
                 else:
-                    print( "insert_csv_path is None, warning..." )
+                    print( "No last_insert_csv_path " )
     except KeyboardInterrupt:
         print("Monitoring stopped.")
     finally:
