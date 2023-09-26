@@ -98,9 +98,13 @@ def load_image(x):
             reader = csv.reader(f)
             next(reader)
             for item in reader:
-                print(f"inserting image: {item[1]}")
-                loading_path.append(item[1])
-                yield item[1]
+                print(item)
+                if len(item) < 2:
+                    print("inserting image: None")
+                else:
+                    print(f"inserting image: {item[1]}")
+                    loading_path.append(item[1])
+                    yield item[1]
     else:
         for item in glob(x):
             try:
