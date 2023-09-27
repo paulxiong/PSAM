@@ -68,7 +68,7 @@ def decode_image(image_path):
         raise RuntimeError(f"Error reading image in decode_image: {image_path}, Error: {e}")
 
         
-#update_imgs_in_db
+#update images to image_database.db
 def update_imgs_in_db(loading_path):
     global DB_path  # Add this line to indicate that you're modifying the global variable
 
@@ -87,7 +87,7 @@ def update_imgs_in_db(loading_path):
     connection.close()
         
 
-# Load image path
+# Load image path: read imgs.csv, appendto loadig_path. Note: non-csv supprt may have issues.
 loading_path=[]
 def load_image(x):
     print(f'insert loadin_image reading {x}')
@@ -235,7 +235,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
 
     # Search for query image(s) if not bypassed
     if not bypass_query and query_src:
-        print("searching ....")
+        print("search began <<<")
         # Search pipeline
         p_search_pre = (
             p_embed.map('vec', ('search_res'), ops.ann_search.milvus_client(
@@ -254,7 +254,7 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         )
         search_results = p_search_img(query_src)
     
-        print("searching 1 ....")
+        print("search ended >>>")
         # Save search results to the output directory
         search_results_dir = Path(output_dir) / "search_results"
         search_results_dir.mkdir(parents=True, exist_ok=True)
