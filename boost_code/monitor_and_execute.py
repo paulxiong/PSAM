@@ -55,7 +55,7 @@ def mark_csv_path_as_processed(db_connection, processed_path):
     cursor.execute("DELETE FROM insert_csv_path WHERE path = ?", (processed_path,))
     db_connection.commit()
 
-def process_external_csv(db_connection, external_csv_path):
+def process_external_csv_old_to_be_removed(db_connection, external_csv_path):
     new_path_list=[]
     cursor = db_connection.cursor()
     with open(external_csv_path, 'r') as csv_file:
@@ -79,6 +79,35 @@ def process_external_csv(db_connection, external_csv_path):
             else:
                 print(f"Ignoring row with unexpected number of values: {row}")
         db_connection.commit()
+    return new_path_list
+
+def process_external_csv(db_connection, external_csv_path):
+    new_path_list = []  # Store new paths that were added
+    cursor = db_connection.cursor()
+    
+    # Read the original CSV file
+    with open(external_csv_path, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        rows = list(csv_reader)
+
+    # Clear the original CSV file
+    with open(external_csv_path, 'w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        
+        for row in rows:
+            if len(row) == 3:
+                _, path, _ = row
+                cursor.execute("SELECT * FROM img_path WHERE path=?", (path,))
+                existing_path = cursor.fetchone()
+                if not existing_path:
+                    # Write the row back to the CSV file
+                    csv_writer.writerow(row)
+                    # Add the path to the list of new paths
+                    new_path_list.append(path)
+            else:
+                print(f"Ignoring row with unexpected number of values: {row}")
+
+    db_connection.commit()
     return new_path_list
 
 
@@ -110,8 +139,10 @@ def main(file_to_monitor, python_script, *python_args):
                         insert_csv_path = f'{insert_csv_path}'
                         print(f'*******************   insert ****************')
                         print(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
-                        print("\n")
-                        subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
+                        # subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor])
+                        result = subprocess.run(["python3", python_script, "--bypass-query", "--insert-src", insert_csv_path,"--query-src",file_to_monitor],stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        print(result.stdout)  # Print the standard output
+                        print(result.stderr)  
                # boost-ai-began: add a table "last-insert-src-path-dir" to database;
                 last_insert_csv_path =retrieve_csv_path(db_connection,"last_insert_csv_path")
                 if last_insert_csv_path:
@@ -123,9 +154,11 @@ def main(file_to_monitor, python_script, *python_args):
                         python_args = ["--bypass-insert", "--insert-src", last_insert_csv_path, "--query-src", file_to_monitor]
                         print(f'*******************   Search ****************')
                         print(["python3", python_script] + python_args)
-                        print("\n")
                         # db_connection.close()
-                        subprocess.run(["python3", python_script] + python_args)
+                        # subprocess.run(["python3", python_script] + python_args)
+                        result = subprocess.run(["python3", python_script] + python_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        print(result.stdout)  # Print the standard output
+                        print(result.stderr)  
                     else:
                         # db_connection.close()
                         print("No query image found in the database by SELECT path FROM query_image_path WHERE op='ping'")
