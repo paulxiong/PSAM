@@ -124,10 +124,15 @@ def main(file_to_monitor, python_script, *python_args):
     try:
         create_img_path_table(db_connection)
         
-        while True:
+        # while True:
+        if True and not is_script_running('search.py'):
             time.sleep(1)
+            # if is_script_running('search.py'):
+            #     print('search.py is running，skipeed this run...')
+            #     continue
             current_modified = os.path.getmtime(file_to_monitor)
-            if current_modified != last_modified:
+            # if current_modified != last_modified:
+            if True:
                 last_modified = current_modified
                 print("File modified. Updating image paths and executing Python script...")
 
@@ -168,8 +173,28 @@ def main(file_to_monitor, python_script, *python_args):
         print("Monitoring stopped.")
     finally:
         db_connection.close()
+import psutil
+
+def is_script_running(script_name):
+    return False
+    for process in psutil.process_iter(attrs=['pid', 'cmdline']):
+        try:
+            process_cmdline = process.info['cmdline']
+            if process_cmdline:
+                if 'python' in process_cmdline[0] and script_name in ' '.join(process_cmdline):
+                    return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return False
 
 if __name__ == "__main__":
+    
+    if is_script_running(sys.argv[0]):
+        print(f'{sys.argv[0]} is running, exit')
+        sys.exit(1)
+    else:
+        print(f'{sys.argv[0]} is not running')
+    
     if len(sys.argv) < 3:
         print("Usage: python3 monitor_and_execute.py <file_to_monitor> <python_script> [python_args ...]")
     else:
