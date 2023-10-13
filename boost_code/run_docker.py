@@ -1,14 +1,9 @@
 import subprocess
 import time
 import os
-def run_app_a():
-    app_a = ["python", "monitor_and_execute.py", "/Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db", "search.py"]
-    return subprocess.Popen(app_a, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-# def run_flutter_app_b():
-#     # Replace 'flutter run' with the actual command to run your Flutter app 
-#     app_b = ["flutter", "run", "-d", "macos"]
-#     return subprocess.Popen(app_b, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+# def run_app_a():
+#     app_a = ["python", "monitor_and_execute.py", "/Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db", "search.py"]
+#     return subprocess.Popen(app_a, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 # Check if Docker is running
 def is_docker_running():
@@ -38,17 +33,17 @@ def wait_for_containers(container_names):
             time.sleep(2)
 
 # Activate the virtual environment and set environment variables
-def setup_environment():
-    subprocess.run(["source", "/Volumes/997G/github/ISAT_with_segment_anything/venv/bin/activate"], shell=True)
-    subprocess.run(["export", "PATH=$PATH:/Volumes/997G/github/photoGPT/flutter/bin/"], shell=True)
+# def setup_environment():
+#     subprocess.run(["source", "/Volumes/997G/github/ISAT_with_segment_anything/venv/bin/activate"], shell=True)
+#     subprocess.run(["export", "PATH=$PATH:/Volumes/997G/github/photoGPT/flutter/bin/"], shell=True)
 
 # Run the monitor_and_execute.py script
-def run_monitor_and_execute():
-    subprocess.run(["python", "monitor_and_execute.py", "/Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db", "search.py","&"])
+# def run_monitor_and_execute():
+#     subprocess.run(["python", "monitor_and_execute.py", "/Users/boxiong/Library/Containers/com.example.tiktokClone/Data/Documents/image_database.db", "search.py","&"])
 
 # Run the Flutter app
-def run_flutter_app():
-    subprocess.run(["flutter", "run", "-d", "macos"])
+# def run_flutter_app():
+#     subprocess.run(["flutter", "run", "-d", "macos"])
 
 if __name__ == "__main__":
     # List of existing container names to start
@@ -79,7 +74,7 @@ if __name__ == "__main__":
 
 
     # Task 6: Run the Flutter app
-    os.chdir("/Volumes/997G/github/photoGPT/tiktok_clone")
+    # os.chdir("/Volumes/997G/github/photoGPT/tiktok_clone")
     # run_flutter_app()
     # process_b = run_flutter_app_b()
 
