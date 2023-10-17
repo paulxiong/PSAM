@@ -71,19 +71,16 @@ HOST = '127.0.0.1'
 PORT = '19530'
 TOPK = 10
 DIM = 2048 # dimension of embedding extracted by MODEL
-COLLECTION_NAME = 'reverse_image_search'
+COLLECTION_NAME = 'reverse1_image_search'
 INDEX_TYPE = 'IVF_FLAT'
 METRIC_TYPE = 'L2'
 
-# path to csv (column_1 indicates image path) OR a pattern of image paths
-# INSERT_SRC = 'reverse_image_search.csv'
-# boost_ai: change following INSERT_SRC to be main()'s arugment, default is none
-INSERT_SRC = '1.csv'
+# Define the source file for insertion
+INSERT_SRC = './。imgs.csv'
+
+# Define the source file for querying
 QUERY_SRC = './test/*/*.JPEG'
 
-
-# ### Embedding pipeline <a class="anchor" id="embedding-pipeline"></a>
-# As mentioned above, the similarity search actually happens to vectors. So we need to convert each image into an embedding. To pass image path into the image embedding operator, we use a function streamly reads image path given a pattern or a csv. Thus the embedding pipeline generates image embeddings given a pattern or csv of image path(s).
 
 # Load image path
 def load_image(x):
@@ -126,6 +123,8 @@ DataCollection(p_display('./test/goldfish/*.JPEG')).show()
 def create_milvus_collection(collection_name, dim):
     # if utility.has_collection(collection_name):
     #     utility.drop_collection(collection_name)
+    if utility.has_collection(collection_name):
+        return Collection(name=collection_name)
     
     fields = [
         FieldSchema(name='path', dtype=DataType.VARCHAR, description='path to image', max_length=500, 
@@ -152,7 +151,7 @@ connections.connect(host=HOST, port=PORT)
 
 # Create collection
 collection = create_milvus_collection(COLLECTION_NAME, DIM)
-print(f'A new collection created: {COLLECTION_NAME}')
+print(f'A  collection : {COLLECTION_NAME}')
 
 
 # #### 2. Insert data <a class="anchor" id="step2"></a>
@@ -162,7 +161,8 @@ print(f'A new collection created: {COLLECTION_NAME}')
 
 # Insert pipeline
 p_insert = (
-        p_embed.map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
+        p_embed.map('img_path', 'img_path',lambda img_path: (img_path, print(img_path))[0])
+        .map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
                     host=HOST,
                     port=PORT,
                     collection_name=COLLECTION_NAME
@@ -174,11 +174,12 @@ p_insert = (
 # Insert all candidate images for  `INSERT_SRC`:
 
 
+print('<<<Number of data inserted:', collection.num_entities)
 # Insert data
 p_insert(INSERT_SRC)
 
 # Check collection
-print('Number of data inserted:', collection.num_entities)
+print('Number of data inserted:', collection.num_entities,'>>>')
 
 
 # #### 3. Search <a class="anchor" id="step3"></a>
