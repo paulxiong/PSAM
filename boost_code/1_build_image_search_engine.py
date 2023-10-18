@@ -83,16 +83,34 @@ QUERY_SRC = './test/*/*.JPEG'
 
 
 # Load image path
-def load_image(x):
-    if x.endswith('csv'):
-        with open(x) as f:
-            reader = csv.reader(f)
-            next(reader)
-            for item in reader:
-                yield item[1]
+import csv
+from glob import glob
+from typing import Generator
+
+def load_image(file_path: str) -> Generator[str, None, None]:
+    """
+    Load images from a file or a directory.
+
+    Args:
+        file_path (str): The path to the file or directory.
+
+    Yields:
+        str: The path of each image file.
+
+    Raises:
+        FileNotFoundError: If the file or directory does not exist.
+    """
+    # Check if the given path is a file with a csv extension
+    if file_path.endswith('csv'):
+        with open(file_path) as file:
+            reader = csv.reader(file)
+            next(reader)  # Skip the header row
+            for row in reader:
+                yield row[1]
     else:
-        for item in glob(x):
-            yield item
+        # Iterate over all files in the specified directory
+        for file in glob(file_path):
+            yield file
             
 # Embedding pipeline
 p_embed = (
@@ -170,14 +188,10 @@ p_insert = (
           .output('mr')
 )
 
-
 # Insert all candidate images for  `INSERT_SRC`:
-
-
 print('<<<Number of data inserted:', collection.num_entities)
 # Insert data
 p_insert(INSERT_SRC)
-
 # Check collection
 print('Number of data inserted:', collection.num_entities,'>>>')
 

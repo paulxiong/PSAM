@@ -205,7 +205,9 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         pipe.input('src')
             .flat_map('src', 'img_path', load_image)
             .map('img_path', 'img', decode_image)
+            .map('img_path', 'img_path', lambda img_path: (img_path, print(img_path))[0]) #this line is for debug only, can be removed
             .map('img', 'vec', ops.image_embedding.timm(model_name=MODEL, device=DEVICE))
+            .map('vec', 'vec', lambda vec: (vec, print(vec))[0]) #this line is for debug only, can be removed
     )
 
     # Create or load collection
@@ -214,15 +216,40 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
         collection = create_milvus_collection(COLLECTION_NAME, DIM, METRIC_TYPE)
         print(f'The collection found: {COLLECTION_NAME}')
         p_insert = (
-            p_embed.map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
+            p_embed.map('img_path', 'img_path', lambda img_path: (img_path, print('<<< '+img_path))[0]) #this line is for debug only, can be removed
+                .map(('img_path', 'vec'), 'mr', ops.ann_insert.milvus_client(
                         host=HOST,
                         port=PORT,
                         collection_name=COLLECTION_NAME
                         ))
+                .map('img_path', 'img_path', lambda img_path: (img_path, print('>>> '+img_path))[0])
                 .output('mr')
+            # p_embed.map('img_path', 'img_path', lambda img_path: (img_path, print('<<< '+img_path))[0]) #this line is for debug only, can be removed
+            #     .map(['img_path', 'vec'], 'mr',collection.insert)
+            #     .map('img_path', 'img_path', lambda img_path: (img_path, print('>>> '+img_path))[0])
+            #     .output('mr')
         )
         # Execute the p_insert pipeline
-        insert_results = p_insert(insert_src)
+        try:
+            print('<<< Number of data inserted:', collection.num_entities)
+            insert_results = p_insert(insert_src)
+            print('Insertion successful Number of data inserted:', collection.num_entities,'>>>')
+        except Exception as e:
+            print("Exception occurred:", e)
+        
+        # insert_results = p_insert(insert_src)
+
+        # try:
+        #     result = p_insert(insert_src).result()
+        #     insert_results = result.get('mr')  # Assuming 'mr' is the output key
+        #     if insert_results:
+        #         print("Insertion successful")
+        #     else:
+        #         print("Insertion failed")
+        # except Exception as e:
+        #     print("Exception occurred:", e)        
+        
+        
         update_imgs_in_db(loading_path)
         # Convert DataQueue to a list and then iterate over the list
         # insert_results_list = insert_results.to_list()
@@ -279,16 +306,6 @@ def main(insert_src, query_src, output_dir, bypass_insert, bypass_query):
                     pil_img.save(img_save_path)
                 except Exception as e:
                     print(f"Error saving image: {img_filename}, Skipping. Error: {e}")
-                    
-        #boost_ai: in addition to original return, the search_results_list 
-        # should also return a image's path, which is identical to where it read, 
-        # the one in imgs.csv. So please modify needed code for this.
-        # Get image paths for returned IDs
-        # p_paths = (
-        #     p_search
-        #         .map('pred', 'ids', lambda x: [{'id': id} for id in x]) 
-        #         .map('ids', 'paths', ops.retrieve.milvus(HOST, PORT, COLLECTION_NAME))
-        # )
 
         # Convert DataQueue to a list of tuples
         search_results_list = dc.to_list()
