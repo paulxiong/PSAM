@@ -152,7 +152,7 @@ def read_images(img_paths):
     imgs = []
     for p in img_paths:
         # imgs.append(Image(cv2.imread(p), 'BGR'))
-        if p.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.tif')):
+        if p.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.tif','webp')):
             # If the file has a common image extension, use cv2.imread
             imgs.append(cv2.imread(p))
         elif p.lower().endswith('.heic'):
