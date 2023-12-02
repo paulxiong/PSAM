@@ -13,24 +13,76 @@ def is_docker_running():
     except subprocess.CalledProcessError:
         return False
 
-# Check if a specific container is running
+# import subprocess
+# import time
+
 def is_container_running(container_name):
     try:
-        output = subprocess.check_output(["docker", "ps", "--filter", f"name={container_name}", "--format", "{{.Names}}"])
-        return container_name in output.decode("utf-8")
+        output = subprocess.check_output(["docker", "inspect", "-f", "{{.State.Status}}", container_name])
+        status = output.decode("utf-8").strip()
+        return status == "running"
     except subprocess.CalledProcessError:
         return False
 
-# Start a list of containers
-def start_containers(container_names):
+def start_and_wait_for_containers(container_names):
     for container_name in container_names:
-        subprocess.run(["docker", "start", container_name])
+        if is_container_running(container_name):
+            print(f"Container '{container_name}' is already running.")
+            continue
+        
+        restart_attempts = 0
+        while restart_attempts < 3:
+            try:
+                subprocess.run(["docker", "start", container_name], check=True, timeout=10)
+                break
+            except subprocess.TimeoutExpired:
+                restart_attempts += 1
+            except subprocess.CalledProcessError:
+                restart_attempts += 1
+                time.sleep(1)
+        if restart_attempts == 3:
+            print(f"Failed to start container '{container_name}' after 3 attempts.")
 
-# Wait for a list of containers to start
-def wait_for_containers(container_names):
-    for container_name in container_names:
-        while not is_container_running(container_name):
-            time.sleep(2)
+
+
+# def start_and_wait_for_containers(container_names):
+#     for container_name in container_names:
+#         restart_attempts = 0
+#         while restart_attempts < 3:
+#             subprocess.run(["docker", "start", container_name])
+#             time.sleep(2)
+#             if is_container_running(container_name):
+#                 break
+#             restart_attempts += 1
+#         if restart_attempts == 3:
+#             print(f"Failed to start container '{container_name}' after 3 attempts.")
+
+
+# Check if a specific container is running
+# def is_container_running(container_name):
+#     try:
+#         output = subprocess.check_output(["docker", "ps", "--filter", f"name={container_name}", "--format", "{{.Names}}"])
+#         return container_name in output.decode("utf-8")
+#     except subprocess.CalledProcessError:
+#         return False
+
+# def is_container_running(container_name):
+#     try:
+#         output = subprocess.check_output(["docker", "inspect", "-f", "{{.State.Status}}", container_name])
+#         status = output.decode("utf-8").strip()
+#         return status == "running"
+#     except subprocess.CalledProcessError:
+#         return False
+# Start a list of containers
+# def start_containers(container_names):
+#     for container_name in container_names:
+#         subprocess.run(["docker", "start", container_name])
+
+# # Wait for a list of containers to start
+# def wait_for_containers(container_names):
+#     for container_name in container_names:
+#         while not is_container_running(container_name):
+#             time.sleep(2)
 
 # Activate the virtual environment and set environment variables
 # def setup_environment():
@@ -57,14 +109,7 @@ if __name__ == "__main__":
         print(f'wait for docker up...')
         time.sleep(2) 
 
-    # Task 2: Start the existing containers
-    start_containers(container_names)
-    
-    # Task 3: Wait for the containers to start
-    wait_for_containers(container_names)
-
-    # Task 4: Setup the running environment
-    # setup_environment()
+    start_and_wait_for_containers(container_names)
 
     # Task 5: Run the monitor_and_execute.py script
     # os.chdir("/Volumes/997G/github/Personalize-SAM/boost_code")
